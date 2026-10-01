@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Shaik Saeed Jamal Hussain</title>
 <meta name="description" content="Shaik Saeed Jamal Hussain is a software developer building browser experiments and small useful things.">
-<meta name="theme-color" content="#f5f5f0">
+<meta name="theme-color" content="#f5f5f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171716" media="(prefers-color-scheme: dark)">
 <meta property="og:title" content="Shaik Saeed Jamal Hussain">
 <meta property="og:description" content="Software developer building browser experiments and small useful things.">
 <meta property="og:type" content="website">
@@ -14,10 +15,11 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
   :root { --paper: #f5f5f0; --ink: #171716; --muted: #777771; --line: #d9d9d2; --link: #244dcc; box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  @media (prefers-color-scheme: dark) { :root { --paper: #171716; --ink: #f5f5f0; --muted: #a3a39a; --line: #363632; --link: #9eb3ff; } }
   *, *::before, *::after { box-sizing: inherit; }
   html { background: var(--paper); }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.6 "DM Sans", sans-serif; -webkit-font-smoothing: antialiased; }
-  main { max-width: 720px; margin: 0 auto; padding: 12vh 24px 88px; }
+  main { width: min(100%, 768px); margin: 0 auto; padding: 12vh 24px 88px; }
   a { color: var(--link); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   a:hover { text-decoration-thickness: 2px; }
   a:focus-visible { outline: 2px solid var(--link); outline-offset: 4px; }
@@ -42,7 +44,10 @@
   .connect { max-width: 570px; }
   .connect p { margin: 0 0 16px; }
   footer { display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font: 400 12px/1.4 "DM Mono", monospace; }
-  @media (max-width: 520px) { main { padding-top: 7vh; } header { margin-bottom: 14vh; } nav { gap: 11px; } .intro { margin-bottom: 14vh; } .intro p { font-size: 17px; } .list li { grid-template-columns: 1fr; gap: 3px; } .meta { order: -1; } .section { margin-bottom: 13vh; } footer { display: block; } footer span { display: block; margin-bottom: 6px; } }
+  @media (min-width: 1100px) { main { padding-top: 14vh; } }
+  @media (max-width: 700px) { main { padding: 9vh 28px 72px; } header { margin-bottom: 14vh; } .intro { margin-bottom: 14vh; } .section { margin-bottom: 12vh; } }
+  @media (max-width: 520px) { main { padding: 7vh 20px 56px; } header { align-items: flex-start; gap: 14px; margin-bottom: 12vh; } nav { gap: 11px; } .intro { margin-bottom: 13vh; } .intro h1 { font-size: clamp(42px, 13vw, 60px); } .intro p { font-size: 17px; } .list li { grid-template-columns: 1fr; gap: 3px; } .meta { order: -1; } .section { margin-bottom: 13vh; } footer { display: block; } footer span { display: block; margin-bottom: 6px; } }
+  @media (max-width: 360px) { header { display: block; } nav { margin-top: 18px; } .intro h1 { font-size: 40px; } .list li { padding: 12px 0; } }
 </style>
 </head>
 <body>
