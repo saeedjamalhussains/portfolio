@@ -28,6 +28,7 @@
   nav { display: flex; gap: 18px; }
   nav a { color: var(--muted); }
   .intro { max-width: 620px; margin-bottom: 18vh; }
+  .desktop-aside { display: none; }
   .intro h1 { margin: 0 0 28px; font: 400 clamp(42px, 8vw, 72px)/.98 "Newsreader", Georgia, serif; letter-spacing: -.025em; }
   .intro p { max-width: 570px; margin: 0 0 16px; font-size: 18px; }
   .intro p:last-child { margin-bottom: 0; color: var(--muted); }
@@ -44,6 +45,20 @@
   .connect { max-width: 570px; }
   .connect p { margin: 0 0 16px; }
   footer { display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font: 400 12px/1.4 "DM Mono", monospace; }
+  @media (min-width: 901px) {
+    main { width: min(100% - 64px, 1040px); padding-top: 10vh; }
+    header { margin-bottom: 16vh; }
+    .intro { max-width: none; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(220px, .55fr); gap: 96px; align-items: end; }
+    .desktop-aside { display: block; padding-bottom: 8px; color: var(--muted); font: 400 13px/1.5 "DM Mono", monospace; }
+    .desktop-aside p { margin: 0 0 28px; }
+    .desktop-aside strong { display: block; margin-bottom: 8px; color: var(--ink); font-weight: 500; }
+    .desktop-aside dl { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; margin: 0; padding-top: 14px; border-top: 1px solid var(--line); }
+    .desktop-aside dt, .desktop-aside dd { margin: 0; }
+    .desktop-aside dd { color: var(--ink); }
+    .section { max-width: 900px; }
+    .list li { padding: 18px 0; }
+    .note { font-size: 15px; }
+  }
   @media (min-width: 1100px) { main { padding-top: 14vh; } }
   @media (max-width: 700px) { main { padding: 9vh 28px 72px; } header { margin-bottom: 14vh; } .intro { margin-bottom: 14vh; } .section { margin-bottom: 12vh; } }
   @media (max-width: 520px) { main { padding: 7vh 20px 56px; } header { align-items: flex-start; gap: 14px; margin-bottom: 12vh; } nav { gap: 11px; } .intro { margin-bottom: 13vh; } .intro h1 { font-size: clamp(42px, 13vw, 60px); } .intro p { font-size: 17px; } .list li { grid-template-columns: 1fr; gap: 3px; } .meta { order: -1; } .section { margin-bottom: 13vh; } footer { display: block; } footer span { display: block; margin-bottom: 6px; } }
@@ -58,9 +73,15 @@
   </header>
 
   <div class="intro" id="top">
-    <h1>Hi, I'm Saeed.</h1>
-    <p>I'm a software developer in Vijayawada, India. I build small things to understand how they work, mostly in the browser.</p>
-    <p>Right now that means ASCII video, static sites, and whatever seems worth making next.</p>
+    <div>
+      <h1>Hi, I'm Saeed.</h1>
+      <p>I'm a software developer in Vijayawada, India. I build small things to understand how they work, mostly in the browser.</p>
+      <p>Right now that means ASCII video, static sites, and whatever seems worth making next.</p>
+    </div>
+    <aside class="desktop-aside" aria-label="Current details">
+      <p><strong>Currently exploring</strong>Interfaces that make technical ideas feel immediate.</p>
+      <dl><dt>Public work</dt><dd>03 repos</dd><dt>Focus</dt><dd>Browser tools</dd><dt>Based in</dt><dd>Vijayawada</dd></dl>
+    </aside>
   </div>
 
   <section class="section" id="work" aria-labelledby="work-title">
