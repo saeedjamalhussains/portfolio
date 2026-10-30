@@ -15,12 +15,20 @@ Open `index.html` in a browser. That's it.
 ## Deploying
 
 Published with GitHub Pages from the `main` branch via the workflow in
-`.github/workflows/`. Every push to `main` redeploys.
+`.github/workflows/`. Every push to `main` redeploys, and a daily scheduled run
+refreshes `assets/github-activity.js` before deploying.
 
 ## Structure
 
-Everything — markup, styles, and any script — lives in `index.html`, organised
-into three sections: Projects, About, and Connect.
+The markup, styles, and script live in `index.html`, organised into three
+sections: Projects, About, and Connect. `404.html` is GitHub Pages' not-found
+page. `assets/` holds the project screenshots, the share image, the icons, and
+the contribution data behind the GitHub activity graph. `assets/fonts/` holds the
+typefaces (Dirtyline 36daysoftype 2022, Wagon, Milky Walky, Comic Cat) with
+their licenses; Wagon and Milky Walky are licensed for personal use only.
+`assets/paper/` holds the crumpled-paper texture from
+[Paperima](https://github.com/nurimator/paperima), which stays under the
+AGPL-3.0 (license and notice alongside it).
 
 ## License
 

@@ -1,8 +1,14 @@
 name: Deploy portfolio
 
+# Publishes every HTML page in the repository, with the assets they use, as one GitHub Pages site:
+# https://saeedjamalhussains.github.io/portfolio/ (index.html at the root, any other page at its own path).
+# Every build starts from a clean folder, and once a deploy succeeds the earlier runs, build artifacts and
+# deployment records are deleted, so only the current build and deployment are kept.
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 3 * * *" # daily, to refresh the GitHub activity graph
   workflow_dispatch:
 
 permissions:
@@ -10,30 +16,183 @@ permissions:
   pages: write
   id-token: write
 
+# One deployment at a time; a newer run waits rather than cancelling one that is already publishing.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-24.04
+    outputs:
+      base_url: ${{ steps.pages.outputs.base_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Configure Pages
+        id: pages
         uses: actions/configure-pages@v6
         with:
           enablement: true
 
+      - name: Refresh GitHub activity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api graphql -F login="${{ github.repository_owner }}" \
+            -f query='query($login: String!) { user(login: $login) { contributionsCollection { contributionCalendar { totalContributions weeks { contributionDays { date contributionCount contributionLevel } } } } } }' \
+            --jq '.data.user.contributionsCollection.contributionCalendar | {updated: (now | todate), total: .totalContributions, days: [.weeks[].contributionDays[] | [.date, .contributionCount, {NONE: 0, FIRST_QUARTILE: 1, SECOND_QUARTILE: 2, THIRD_QUARTILE: 3, FOURTH_QUARTILE: 4}[.contributionLevel]]]}' \
+            > activity.json \
+            && { printf 'window.githubActivity = '; cat activity.json; printf ';\n'; } > assets/github-activity.js \
+            || echo "::warning::Could not refresh GitHub activity; deploying the committed copy."
+          rm -f activity.json
+
+      # Everything a visitor needs (every .html page at any depth, plus assets/ and any other folders the pages
+      # use) goes into _site. Repository-only files stay out: git and workflow files, the README, local
+      # previews and macOS metadata.
+      - name: Assemble the site
+        run: |
+          set -euo pipefail
+          rm -rf _site # never reuse anything from an earlier build
+          rsync -a --delete \
+            --exclude '.git/' --exclude '.github/' --exclude '_site/' \
+            --exclude 'README.md' --exclude '_preview.html' --exclude '_*.html' \
+            --exclude '.DS_Store' --exclude '.gitignore' --exclude '.claude/' \
+            ./ _site/
+          touch _site/.nojekyll # serve files exactly as they are, without Jekyll processing
+          test -f _site/index.html || { echo "::error::index.html is missing, so the site would have no home page."; exit 1; }
+          echo "Pages in this deployment:"; (cd _site && find . -name '*.html' | sort)
+
+      # Fail before publishing if any page points at a local file that isn't in the site.
+      - name: Check every page's local links and assets
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          from html.parser import HTMLParser
+          from urllib.parse import unquote, urlsplit
+
+          root = os.path.abspath("_site")
+          base = (os.environ.get("BASE_PATH") or "").rstrip("/")
+          external = ("http:", "https:", "mailto:", "tel:", "data:", "javascript:", "//", "#")
+
+          class Refs(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.refs = []; self.in_style = False
+              def handle_starttag(self, tag, attrs):
+                  self.in_style = tag == "style"
+                  for name, value in attrs:
+                      if not value: continue
+                      if name in ("href", "src", "poster"): self.refs.append(value)
+                      elif name == "srcset": self.refs += [part.strip().split(" ")[0] for part in value.split(",")]
+                      elif name == "style": self.refs += re.findall(r"url\(\s*['\"]?([^'\")]+)", value)
+              def handle_endtag(self, tag):
+                  if tag == "style": self.in_style = False
+              def handle_data(self, data):
+                  if self.in_style: self.refs += re.findall(r"url\(\s*['\"]?([^'\")]+)", data)
+
+          missing = []
+          pages = sorted(os.path.join(d, f) for d, _, fs in os.walk(root) for f in fs if f.endswith(".html"))
+          for page in pages:
+              parser = Refs(); parser.feed(open(page, encoding="utf-8").read())
+              for ref in parser.refs:
+                  ref = unquote(ref.strip())  # decode first: url(%23id) inside inline SVGs is a fragment, not a file
+                  if ref.startswith(external): continue
+                  path = unquote(urlsplit(ref).path)
+                  if not path: continue
+                  if path.startswith("/"):
+                      if base and not (path == base or path.startswith(base + "/")):
+                          missing.append((page, ref, f"absolute path outside the site's base path {base}/")); continue
+                      target = os.path.join(root, path[len(base):].lstrip("/"))
+                  else:
+                      target = os.path.join(os.path.dirname(page), path)
+                  target = os.path.normpath(target)
+                  if os.path.isdir(target): target = os.path.join(target, "index.html")
+                  if not target.startswith(root) or not os.path.exists(target):
+                      missing.append((page, ref, "not found"))
+
+          for page, ref, why in missing:
+              print(f"::error file={os.path.relpath(page, root)}::{ref} ({why})")
+          print(f"Checked {len(pages)} page(s); {len(missing)} broken local reference(s).")
+          sys.exit(1 if missing else 0)
+          PY
+
+      - name: List the page links
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          {
+            echo "### Pages in this deployment"
+            echo
+            cd _site
+            find . -name '*.html' | sort | while read -r page; do
+              path="${page#./}"
+              case "$path" in
+                index.html) echo "- Home: ${BASE_URL}/" ;;
+                404.html)   echo "- Not-found page (shown for any missing URL): ${BASE_URL}/404.html" ;;
+                */index.html) echo "- ${BASE_URL}/${path%index.html}" ;;
+                *)          echo "- ${BASE_URL}/${path}" ;;
+              esac
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
+          retention-days: 1
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Share the link
+        run: echo "::notice title=Portfolio is live::${{ steps.deployment.outputs.page_url }}"
+
+  # Runs only after a successful deploy, so the live site is never left without a deployment.
+  cleanup:
+    needs: deploy
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+      deployments: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      THIS_RUN: ${{ github.run_id }}
+    steps:
+      - name: Delete earlier runs of this workflow
+        run: |
+          gh run list -R "$REPO" --workflow deploy.yml --status completed --limit 500 --json databaseId --jq '.[].databaseId' |
+            while read -r id; do
+              [ "$id" = "$THIS_RUN" ] && continue
+              gh api -X DELETE "repos/$REPO/actions/runs/$id" --silent && echo "Deleted run $id" || echo "::warning::Could not delete run $id"
+            done
+
+      - name: Delete earlier build artifacts
+        run: |
+          gh api --paginate "repos/$REPO/actions/artifacts?per_page=100" --jq ".artifacts[] | select(.workflow_run.id != $THIS_RUN) | .id" |
+            while read -r id; do
+              gh api -X DELETE "repos/$REPO/actions/artifacts/$id" --silent && echo "Deleted artifact $id" || echo "::warning::Could not delete artifact $id"
+            done
+
+      - name: Delete earlier deployments
+        run: |
+          # Newest first; the first one is the deployment that is serving the site now, so it stays.
+          ids=$(gh api "repos/$REPO/deployments?environment=github-pages&per_page=100" --jq '.[].id')
+          latest=$(printf '%s\n' "$ids" | head -n 1)
+          for id in $ids; do
+            [ "$id" = "$latest" ] && continue
+            # GitHub only deletes inactive deployments, so retire each one first
+            gh api -X POST "repos/$REPO/deployments/$id/statuses" -f state=inactive --silent || true
+            gh api -X DELETE "repos/$REPO/deployments/$id" --silent && echo "Deleted deployment $id" || echo "::warning::Could not delete deployment $id"
+          done

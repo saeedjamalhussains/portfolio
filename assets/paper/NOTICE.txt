@@ -1,0 +1,4 @@
+paper-crumple.webp is paper_overlay_2.webp from Paperima
+(https://github.com/nurimator/paperima), Copyright (c) 2026 Dayverse.id.
+It is used unmodified and is licensed under the GNU Affero General Public
+License v3.0; see LICENSE-AGPL-3.0.txt in this folder.
